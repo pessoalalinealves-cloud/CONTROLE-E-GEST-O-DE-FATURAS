@@ -190,7 +190,7 @@
   /* --- Dashboard --- */
   .grid-stats{
     display:grid;
-    grid-template-columns:repeat(4, 1fr);
+    grid-template-columns:repeat(5, 1fr);
     gap:14px;
     margin-bottom:1.6rem;
   }
@@ -387,6 +387,9 @@
       <div class="nav-item ativo" data-pagina="dashboard"><span class="nav-icone">▤</span> Dashboard</div>
       <div class="nav-item" data-pagina="lista"><span class="nav-icone">≡</span> Faturas</div>
       <div class="nav-item" data-pagina="aprovacao"><span class="nav-icone">✓</span> Conferência</div>
+      <div class="nav-item" data-pagina="canhotos"><span class="nav-icone">📎</span> Canhotos</div>
+      <div class="nav-item" data-pagina="nao-lancados"><span class="nav-icone">⛔</span> Não lançados</div>
+      <div class="nav-item" data-pagina="divergencias"><span class="nav-icone">⚠</span> Divergências</div>
       <div class="nav-item" data-pagina="usuarios"><span class="nav-icone">☺</span> Usuários</div>
 
       <div class="usuario-sidebar" onclick="mostrarPagina('perfil')" style="cursor:pointer;">
@@ -410,6 +413,7 @@
           <div class="card-stat conferencia"><div class="rot">Em conferência</div><div class="num">6</div></div>
           <div class="card-stat liberada"><div class="rot">Liberadas p/ pagamento</div><div class="num">9</div></div>
           <div class="card-stat paga"><div class="rot">Pagas (semana)</div><div class="num">22</div></div>
+          <div class="card-stat" style="cursor:pointer;" onclick="mostrarPagina('divergencias')"><div class="rot">Divergências de valor</div><div class="num" style="color:var(--tijolo);">1</div></div>
         </div>
 
         <div class="duas-colunas">
@@ -436,8 +440,9 @@
         </div>
 
         <div class="barra-filtros">
-          <input type="text" placeholder="Buscar por transportadora...">
-          <input type="text" placeholder="Nº da fatura ou do CT-e...">
+          <input type="text" id="busca-transportadora" placeholder="Buscar por transportadora...">
+          <input type="text" id="busca-numero" placeholder="Nº da fatura ou do CT-e...">
+          <button class="btn-acao" onclick="filtrarFaturas()" style="flex:none; padding:9px 16px; background:var(--tinta); color:#fff; display:flex; align-items:center; gap:6px;">🔍 Buscar</button>
           <select id="filtro-status-faturas" onchange="filtrarFaturas()">
             <option value="pendentes">Pendentes (não pagas)</option>
             <option value="todos">Todos os status</option>
@@ -514,6 +519,10 @@
               <div class="campo-dado"><label>Transportadora</label><div class="valor">Log 2 Bebedouro Transportes LTDA</div></div>
               <div class="campo-dado"><label>Número da fatura</label><div class="valor mono">F-58231</div></div>
               <div class="campo-dado"><label>CT-e vinculados</label><div class="valor mono">1570 · 1571 · 1572</div></div>
+              <div class="campo-dado">
+                <label>Canhotos</label>
+                <div class="valor" id="status-canhotos-fatura">2 de 3 anexados — <span style="color:var(--tijolo); font-weight:600;">CT-e 1572 pendente</span></div>
+              </div>
               <div class="campo-dado"><label>Valor total</label><div class="valor mono">R$ 19.800,00</div></div>
               <div class="campo-dado"><label>Data de vencimento</label><div class="valor">21/07/2026</div></div>
               <div class="campo-dado"><label>Data de recebimento</label><div class="valor">14/07/2026</div></div>
@@ -523,7 +532,7 @@
               </div>
 
               <div id="acoes-logistica" class="acoes-aprovacao" style="display:none;">
-                <button class="btn-acao btn-liberar">Liberar para pagamento</button>
+                <button class="btn-acao btn-liberar" id="btn-liberar-pagamento" disabled title="Existe canhoto pendente — anexe antes de liberar" style="opacity:0.5; cursor:not-allowed;">🔒 Liberar para pagamento</button>
                 <button class="btn-acao btn-divergencia">Marcar divergência</button>
               </div>
 
@@ -540,6 +549,185 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- DIVERGÊNCIAS -->
+      <div class="pagina" id="pagina-divergencias" style="display:none;">
+        <div class="topo-pagina">
+          <h1>Divergências de valor</h1>
+          <button class="btn-acao btn-liberar" style="flex:none; padding:9px 18px;" onclick="document.getElementById('form-nova-divergencia').style.display='block';">+ Registrar divergência</button>
+        </div>
+        <p style="font-size:13px; color:var(--texto-mudo); margin-top:-0.6rem; margin-bottom:1.2rem;">Registro de CT-e/faturas com valor cobrado diferente do valor validado pelo portal — substitui o e-mail manual, ficando visível e consultável por todos com acesso.</p>
+
+        <div class="painel" id="form-nova-divergencia" style="display:none; margin-bottom:1.2rem;">
+          <h2>Registrar nova divergência</h2>
+          <div class="aprovacao-grid" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="campo-dado"><label>Data da carga</label><input type="date" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Transportadora</label><input type="text" placeholder="Nome da transportadora" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>CT-e</label><input type="text" placeholder="Número do CT-e" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Unidade</label><input type="text" placeholder="Ex: Norte Pioneiro" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Fábrica</label><input type="text" placeholder="Ex: Agudos" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Tipo</label>
+              <select style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;">
+                <option>Retorno</option><option>Ida</option><option>Saindo revenda</option>
+              </select>
+            </div>
+            <div class="campo-dado"><label>Valor Portal (esperado)</label><input type="text" id="input-valor-portal" placeholder="R$ 0,00" oninput="calcularDiferenca()" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Valor CT-e (cobrado)</label><input type="text" id="input-valor-cte" placeholder="R$ 0,00" oninput="calcularDiferenca()" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Diferença</label><div id="valor-diferenca-calculada" class="valor mono" style="padding:9px 0; color:var(--tijolo); font-weight:600;">R$ 0,00</div></div>
+          </div>
+          <div class="campo-dado"><label>Motivo</label><input type="text" placeholder="Ex: Valor frete mínimo não validado" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+          <div class="campo-dado"><label>Forma / data de pagamento</label><input type="text" placeholder="Ex: Pix em 07/07/2026" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+          <div class="acoes-aprovacao">
+            <button class="btn-acao btn-liberar">Salvar divergência</button>
+            <button class="btn-acao btn-divergencia" onclick="document.getElementById('form-nova-divergencia').style.display='none';">Cancelar</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:1rem; align-items:center;">
+          <input type="text" id="busca-motivo-divergencia" placeholder="Pesquisar por motivo..." onkeydown="if(event.key==='Enter') buscarDivergenciaPorMotivo();" style="padding:8px 12px; border:1px solid var(--linha); border-radius:6px; font-size:13px; min-width:220px;">
+          <button class="btn-acao" onclick="buscarDivergenciaPorMotivo()" style="flex:none; padding:8px 14px; background:var(--tinta); color:#fff;">→</button>
+        </div>
+
+        <table class="faturas">
+          <thead>
+            <tr>
+              <th>Data carga</th><th>Transportadora</th><th>CT-e</th><th>Unidade</th><th>Fábrica</th><th>Tipo</th><th>Valor Portal</th><th>Valor CT-e</th><th>Diferença</th><th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-divergencias">
+            <tr data-motivo="valor frete mínimo não validado" data-diferenca="-810.00">
+              <td>07/07</td><td>Boa Viagem</td><td class="mono">118637</td><td>Norte Pioneiro</td><td>Agudos</td><td>Retorno</td>
+              <td class="mono" style="background:var(--verde-bg);">R$ 3.990,00</td>
+              <td class="mono">R$ 4.800,00</td>
+              <td class="mono" style="background:var(--tijolo-bg); color:var(--tijolo);">-R$ 810,00</td>
+              <td style="font-size:12.5px;">Valor frete mínimo não validado</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="text-align:right; margin-top:10px; font-size:14px;">
+          <span style="color:var(--texto-mudo);">Somatório das diferenças:</span>
+          <span id="somatorio-divergencias" class="mono" style="font-weight:700; color:var(--tijolo); margin-left:6px;">-R$ 810,00</span>
+        </div>
+      </div>
+
+      <!-- CANHOTOS -->
+      <div class="pagina" id="pagina-canhotos" style="display:none;">
+        <div class="topo-pagina">
+          <h1>Canhotos</h1>
+          <button class="btn-acao btn-liberar" style="flex:none; padding:9px 18px;" onclick="document.getElementById('form-novo-canhoto').style.display='block';">+ Registrar canhoto</button>
+        </div>
+        <p style="font-size:13px; color:var(--texto-mudo); margin-top:-0.6rem; margin-bottom:1.2rem;">Comprovantes de entrega assinados pelo destinatário. Uma fatura só pode ser liberada para pagamento quando o canhoto de todos os seus CT-e estiver anexado aqui.</p>
+
+        <div class="painel" id="form-novo-canhoto" style="display:none; margin-bottom:1.2rem;">
+          <h2>Registrar novo canhoto</h2>
+          <div class="aprovacao-grid" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="campo-dado"><label>Data validação</label><input type="date" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Transportadora</label><input type="text" placeholder="Nome da transportadora" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Data emissão CT-e</label><input type="date" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Nº CT-e</label><input type="text" placeholder="Número do CT-e" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Anexo do canhoto (opcional agora)</label><input type="file" style="width:100%; font-size:13px;"></div>
+          </div>
+          <div class="acoes-aprovacao">
+            <button class="btn-acao btn-liberar" onclick="registrarNovoCanhoto();">Salvar canhoto</button>
+            <button class="btn-acao btn-divergencia" onclick="document.getElementById('form-novo-canhoto').style.display='none';">Cancelar</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:1rem; align-items:center;">
+          <button class="btn-acao filtro-canhoto ativo" data-filtro="pendente" onclick="filtrarCanhotos('pendente', this)" style="flex:none; padding:7px 16px; background:var(--tinta); color:#fff;">Pendentes</button>
+          <button class="btn-acao filtro-canhoto" data-filtro="todos" onclick="filtrarCanhotos('todos', this)" style="flex:none; padding:7px 16px; background:#fff; color:var(--tinta); border:1px solid var(--linha);">Todos</button>
+          <input type="text" id="busca-canhoto" placeholder="Pesquisar nº CT-e..." onkeydown="if(event.key==='Enter') buscarCanhoto();" style="padding:8px 12px; border:1px solid var(--linha); border-radius:6px; font-size:13px; margin-left:8px;">
+          <button class="btn-acao" onclick="buscarCanhoto()" style="flex:none; padding:8px 14px; background:var(--tinta); color:#fff;">→</button>
+        </div>
+
+        <table class="faturas">
+          <thead>
+            <tr>
+              <th>Data validação</th><th>Transportadora</th><th>Data emissão CT-e</th><th>Nº CT-e</th><th>Status</th><th>Data anexo</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-canhotos">
+            <tr data-status-canhoto="anexado" data-data-validacao="2026-06-08">
+              <td>08/jun</td><td>Verdes Campos</td><td>05/jun</td><td class="mono">138611</td>
+              <td><span class="selo liberada canhoto-selo">Anexado</span></td><td class="canhoto-data-anexo">10/jun</td>
+              <td class="icone-pdf">PDF ↗</td>
+            </tr>
+            <tr data-status-canhoto="anexado" data-data-validacao="2026-06-12">
+              <td>12/jun</td><td>Verdes Campos</td><td>10/jun</td><td class="mono">138695</td>
+              <td><span class="selo liberada canhoto-selo">Anexado</span></td><td class="canhoto-data-anexo">15/jun</td>
+              <td class="icone-pdf">PDF ↗</td>
+            </tr>
+            <tr data-status-canhoto="anexado" data-data-validacao="2026-06-15">
+              <td>15/jun</td><td>Castoldi</td><td>11/jun</td><td class="mono">88852</td>
+              <td><span class="selo liberada canhoto-selo">Anexado</span></td><td class="canhoto-data-anexo">16/jun</td>
+              <td class="icone-pdf">PDF ↗</td>
+            </tr>
+            <tr data-status-canhoto="pendente" data-data-validacao="2026-06-27">
+              <td>27/jun</td><td>Expresso Ponta Grossa</td><td>25/jun</td><td class="mono">1619</td>
+              <td><span class="selo recebida canhoto-selo">Pendente</span></td><td class="canhoto-data-anexo">—</td>
+              <td><button class="btn-acao btn-liberar btn-anexar-canhoto" style="flex:none; padding:6px 14px; font-size:12px;" onclick="anexarCanhoto(this)">📎 Anexar canhoto</button></td>
+            </tr>
+            <tr data-status-canhoto="pendente" data-data-validacao="2026-06-29">
+              <td>29/jun</td><td>Expresso Ponta Grossa</td><td>25/jun</td><td class="mono">1621</td>
+              <td><span class="selo recebida canhoto-selo">Pendente</span></td><td class="canhoto-data-anexo">—</td>
+              <td><button class="btn-acao btn-liberar btn-anexar-canhoto" style="flex:none; padding:6px 14px; font-size:12px;" onclick="anexarCanhoto(this)">📎 Anexar canhoto</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CT-E NÃO LANÇADOS -->
+      <div class="pagina" id="pagina-nao-lancados" style="display:none;">
+        <div class="topo-pagina">
+          <h1>CT-e não lançados</h1>
+          <button class="btn-acao btn-liberar" style="flex:none; padding:9px 18px;" onclick="document.getElementById('form-novo-nao-lancado').style.display='block';">+ Registrar</button>
+        </div>
+        <p style="font-size:13px; color:var(--texto-mudo); margin-top:-0.6rem; margin-bottom:1.2rem;">CT-e que não são lançados no sistema interno, com a justificativa registrada — substitui o controle manual em planilha.</p>
+
+        <div class="painel" id="form-novo-nao-lancado" style="display:none; margin-bottom:1.2rem;">
+          <h2>Registrar CT-e não lançado</h2>
+          <div class="aprovacao-grid" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="campo-dado"><label>Revenda</label><input type="text" placeholder="Ex: Ponta Grossa" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Data lançamento</label><input type="date" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Transportadora</label><input type="text" placeholder="Nome da transportadora" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Nº CT-e</label><input type="text" placeholder="Número do CT-e" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Nota</label><input type="text" placeholder="Ex: Vasilhame" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+            <div class="campo-dado"><label>Situação</label>
+              <select id="select-situacao-nao-lancado" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;">
+                <option value="cancelado">Cancelado</option>
+                <option value="desacordo">Desacordo</option>
+                <option value="estoque">Estoque fechado</option>
+              </select>
+            </div>
+          </div>
+          <div class="campo-dado"><label>Motivo</label><input type="text" id="input-motivo-nao-lancado" placeholder="Ex: Virada do mês" style="width:100%; padding:9px 11px; border:1px solid var(--linha); border-radius:6px; font-size:13.5px;"></div>
+          <div class="acoes-aprovacao">
+            <button class="btn-acao btn-liberar" onclick="registrarNaoLancado();">Salvar</button>
+            <button class="btn-acao btn-divergencia" onclick="document.getElementById('form-novo-nao-lancado').style.display='none';">Cancelar</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:1rem;">
+          <button class="btn-acao filtro-nao-lancado ativo" data-filtro="todos" onclick="filtrarNaoLancados('todos', this)" style="flex:none; padding:7px 16px; background:var(--tinta); color:#fff;">Todos</button>
+          <button class="btn-acao filtro-nao-lancado" data-filtro="cancelado" onclick="filtrarNaoLancados('cancelado', this)" style="flex:none; padding:7px 16px; background:#fff; color:var(--tinta); border:1px solid var(--linha);">Cancelados</button>
+          <button class="btn-acao filtro-nao-lancado" data-filtro="desacordo" onclick="filtrarNaoLancados('desacordo', this)" style="flex:none; padding:7px 16px; background:#fff; color:var(--tinta); border:1px solid var(--linha);">Desacordo</button>
+          <button class="btn-acao filtro-nao-lancado" data-filtro="estoque" onclick="filtrarNaoLancados('estoque', this)" style="flex:none; padding:7px 16px; background:#fff; color:var(--tinta); border:1px solid var(--linha);">Estoque fechado</button>
+        </div>
+
+        <table class="faturas">
+          <thead>
+            <tr>
+              <th>Revenda</th><th>Data lançamento</th><th>Transportadora</th><th>Nº CT-e</th><th>Nota</th><th>Situação</th><th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-nao-lancados">
+            <tr data-situacao="estoque">
+              <td>Ponta Grossa</td><td>01/jul</td><td>Maria Fumaça</td><td class="mono">18109</td><td>Vasilhame</td>
+              <td><span class="selo recebida">Estoque fechado</span></td><td style="font-size:12.5px;">Virada do mês</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- USUÁRIOS -->
@@ -655,6 +843,167 @@ function mudarVisaoAprovacao(visao){
     btnLog.style.background = '#fff'; btnLog.style.color = 'var(--tinta)'; btnLog.style.border = '1px solid var(--linha)';
     atualizarAcaoFinanceiro();
   }
+}
+
+function paraNumero(texto){
+  const limpo = String(texto).replace('R$','').replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+  const n = parseFloat(limpo);
+  return isNaN(n) ? 0 : n;
+}
+
+const rotulosSituacao = {
+  cancelado: 'Cancelado',
+  desacordo: 'Desacordo',
+  estoque: 'Estoque fechado',
+};
+
+function filtrarNaoLancados(filtro, botao){
+  document.querySelectorAll('.filtro-nao-lancado').forEach(b => {
+    b.style.background = '#fff'; b.style.color = 'var(--tinta)'; b.style.border = '1px solid var(--linha)';
+  });
+  botao.style.background = 'var(--tinta)'; botao.style.color = '#fff'; botao.style.border = 'none';
+
+  document.querySelectorAll('#corpo-tabela-nao-lancados tr').forEach(linha => {
+    const situacao = linha.dataset.situacao;
+    linha.style.display = (filtro === 'todos' || situacao === filtro) ? '' : 'none';
+  });
+}
+
+function registrarNaoLancado(){
+  const form = document.getElementById('form-novo-nao-lancado');
+  const textos = form.querySelectorAll('input[type=text]');
+  const [revenda, transportadora, numeroCte, nota] = Array.from(textos).map(i => i.value);
+  const dataLancamentoISO = form.querySelector('input[type=date]').value;
+  const situacao = document.getElementById('select-situacao-nao-lancado').value;
+  const motivo = document.getElementById('input-motivo-nao-lancado').value;
+
+  const corpo = document.getElementById('corpo-tabela-nao-lancados');
+  const novaLinha = document.createElement('tr');
+  novaLinha.dataset.situacao = situacao;
+  novaLinha.innerHTML = `
+    <td>${revenda || '—'}</td><td>${formatarDataCurta(dataLancamentoISO)}</td><td>${transportadora || '—'}</td><td class="mono">${numeroCte || '—'}</td><td>${nota || '—'}</td>
+    <td><span class="selo recebida">${rotulosSituacao[situacao]}</span></td><td style="font-size:12.5px;">${motivo || '—'}</td>
+  `;
+  corpo.appendChild(novaLinha);
+
+  form.style.display = 'none';
+  textos.forEach(i => i.value = '');
+  form.querySelector('input[type=date]').value = '';
+  document.getElementById('input-motivo-nao-lancado').value = '';
+}
+
+function formatarDataCurta(dataISO){
+  if(!dataISO) return '—';
+  const [ano, mes, dia] = dataISO.split('-');
+  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return `${dia}/${meses[parseInt(mes,10)-1]}`;
+}
+
+function buscarDivergenciaPorMotivo(){
+  const termo = document.getElementById('busca-motivo-divergencia').value.trim().toLowerCase();
+  document.querySelectorAll('#corpo-tabela-divergencias tr').forEach(linha => {
+    const motivo = linha.dataset.motivo || '';
+    linha.style.display = (!termo || motivo.includes(termo)) ? '' : 'none';
+  });
+  atualizarSomatorioDivergencias();
+}
+
+function atualizarSomatorioDivergencias(){
+  let total = 0;
+  document.querySelectorAll('#corpo-tabela-divergencias tr').forEach(linha => {
+    if(linha.style.display === 'none') return;
+    total += parseFloat(linha.dataset.diferenca || '0');
+  });
+  const el = document.getElementById('somatorio-divergencias');
+  el.textContent = (total < 0 ? '-' : '') + 'R$ ' + Math.abs(total).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  el.style.color = total < 0 ? 'var(--tijolo)' : 'var(--verde)';
+}
+
+function ordenarCanhotos(){
+  const corpo = document.getElementById('corpo-tabela-canhotos');
+  const linhas = Array.from(corpo.querySelectorAll('tr'));
+  linhas.sort((a, b) => a.dataset.dataValidacao.localeCompare(b.dataset.dataValidacao));
+  linhas.forEach(linha => corpo.appendChild(linha));
+}
+
+function registrarNovoCanhoto(){
+  const form = document.getElementById('form-novo-canhoto');
+  const inputs = form.querySelectorAll('input[type=text], input[type=date]');
+  const [dataValidacaoISO, transportadora, dataEmissaoISO, numeroCte] = Array.from(inputs).map(i => i.value);
+
+  const corpo = document.getElementById('corpo-tabela-canhotos');
+  const novaLinha = document.createElement('tr');
+  novaLinha.dataset.statusCanhoto = 'pendente';
+  novaLinha.dataset.dataValidacao = dataValidacaoISO || '9999-99-99';
+  novaLinha.innerHTML = `
+    <td>${formatarDataCurta(dataValidacaoISO)}</td><td>${transportadora || '—'}</td><td>${formatarDataCurta(dataEmissaoISO)}</td><td class="mono">${numeroCte || '—'}</td>
+    <td><span class="selo recebida canhoto-selo">Pendente</span></td><td class="canhoto-data-anexo">—</td>
+    <td><button class="btn-acao btn-liberar btn-anexar-canhoto" style="flex:none; padding:6px 14px; font-size:12px;" onclick="anexarCanhoto(this)">📎 Anexar canhoto</button></td>
+  `;
+  corpo.appendChild(novaLinha);
+  ordenarCanhotos();
+
+  form.style.display = 'none';
+  inputs.forEach(i => i.value = '');
+  filtrarCanhotos(filtroCanhotoAtual, document.querySelector(`.filtro-canhoto[data-filtro="${filtroCanhotoAtual}"]`));
+}
+
+let filtroCanhotoAtual = 'pendente';
+ordenarCanhotos();
+
+function filtrarCanhotos(filtro, botao){
+  filtroCanhotoAtual = filtro;
+  document.querySelectorAll('.filtro-canhoto').forEach(b => {
+    b.style.background = '#fff'; b.style.color = 'var(--tinta)'; b.style.border = '1px solid var(--linha)';
+  });
+  botao.style.background = 'var(--tinta)'; botao.style.color = '#fff'; botao.style.border = 'none';
+  document.getElementById('busca-canhoto').value = '';
+
+  document.querySelectorAll('#corpo-tabela-canhotos tr').forEach(linha => {
+    const status = linha.dataset.statusCanhoto;
+    linha.style.display = (filtro === 'todos' || status === filtro) ? '' : 'none';
+  });
+}
+
+function buscarCanhoto(){
+  const termo = document.getElementById('busca-canhoto').value.trim().toLowerCase();
+  document.querySelectorAll('#corpo-tabela-canhotos tr').forEach(linha => {
+    if(!termo){
+      const status = linha.dataset.statusCanhoto;
+      linha.style.display = (filtroCanhotoAtual === 'todos' || status === filtroCanhotoAtual) ? '' : 'none';
+      return;
+    }
+    const numeroCte = linha.querySelector('td.mono').textContent.toLowerCase();
+    linha.style.display = numeroCte.includes(termo) ? '' : 'none';
+  });
+}
+
+function anexarCanhoto(botao){
+  const linha = botao.closest('tr');
+  const numeroCte = linha.querySelector('td.mono').textContent;
+  const confirmado = confirm(`Confirma que o canhoto assinado do CT-e ${numeroCte} está sendo anexado?`);
+  if(!confirmado) return;
+
+  linha.dataset.statusCanhoto = 'anexado';
+  const selo = linha.querySelector('.canhoto-selo');
+  selo.textContent = 'Anexado';
+  selo.className = 'selo liberada canhoto-selo';
+  const hoje = new Date().toISOString().slice(0, 10);
+  linha.querySelector('.canhoto-data-anexo').textContent = formatarDataCurta(hoje);
+  const celulaAcao = botao.parentElement;
+  celulaAcao.innerHTML = '<span class="icone-pdf">PDF ↗</span>';
+  if(filtroCanhotoAtual === 'pendente'){
+    linha.style.display = 'none';
+  }
+}
+
+function calcularDiferenca(){
+  const valorPortal = paraNumero(document.getElementById('input-valor-portal').value);
+  const valorCte = paraNumero(document.getElementById('input-valor-cte').value);
+  const diferenca = valorPortal - valorCte;
+  const el = document.getElementById('valor-diferenca-calculada');
+  el.textContent = (diferenca < 0 ? '-' : '') + 'R$ ' + Math.abs(diferenca).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  el.style.color = diferenca < 0 ? 'var(--tijolo)' : 'var(--verde)';
 }
 
 function mostrarPagina(nome){
